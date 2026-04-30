@@ -15,20 +15,51 @@ module put_in_order
     output [ width   - 1 : 0 ]  down_data
 );
 
-    // Task:
-    //
-    // Implement a module that accepts many outputs of the computational blocks
-    // and outputs them one by one in order. Input signals "up_vlds" and "up_data"
-    // are coming from an array of non-pipelined computational blocks.
-    // These external computational blocks have a variable latency.
-    //
-    // The order of incoming "up_vlds" is not determent, and the task is to
-    // output "down_vld" and corresponding data in a round-robin manner,
-    // one after another, in order.
-    //
-    // Comment:
-    // The idea of the block is kinda similar to the "parallel_to_serial" block
-    // from Homework 2, but here block should also preserve the output order.
+    localparam ptr_width = $clog2(n_inputs);
+    logic [width - 1:0] data_reg [n_inputs - 1:0];
+    logic [n_inputs - 1:0] data_valid;
+    logic [ptr_width - 1:0] expected_ptr;
 
+    
+    genvar i;
+    generate
+        for (i = 0; i < n_inputs; i++) begin
+            always_ff @ (posedge clk) begin
+                if (rst) begin
+
+                    
+                    data_valid[i] <= 1'b0;
+                    data_reg[i]   <= '0;
+                end
+                
+                else begin
+                    if (up_vlds[i]) begin
+                        data_reg[i]   <= up_data[i];
+                        data_valid[i] <= 1'b1;
+                    end
+                    else if ((expected_ptr ==  (i)) && down_vld) begin
+                        data_valid[i] <= 1'b0;
+                    end
+                end
+            end
+        end
+    endgenerate
+
+    
+    always_ff @ (posedge clk) begin
+        if (rst) begin
+            expected_ptr <= '0;
+        end
+        else if (down_vld) begin
+            
+            if (expected_ptr == n_inputs - 1)
+                expected_ptr <= '0;
+            else
+                expected_ptr   <= expected_ptr + 1'b1;
+        end
+    end
+
+    assign down_vld  = data_valid[expected_ptr];
+    assign down_data =   data_reg[expected_ptr];
 
 endmodule

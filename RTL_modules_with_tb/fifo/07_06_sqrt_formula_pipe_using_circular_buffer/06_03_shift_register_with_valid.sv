@@ -24,7 +24,7 @@ module one_bit_wide_shift_register_with_reset
 
 endmodule
 
-
+//----------------------------------------------------------------------------
 
 module shift_register
 # (
@@ -49,7 +49,9 @@ module shift_register
 
 endmodule
 
-
+//----------------------------------------------------------------------------
+// Task
+//----------------------------------------------------------------------------
 
 module shift_register_with_valid
 # (
@@ -66,31 +68,7 @@ module shift_register_with_valid
     output [width - 1:0] out_data
 );
 
-   
-    logic [width - 1:0] shift_reg [depth - 1:0];
-    logic               shift_vld [depth - 1:0];
-    
-    always_ff @ (posedge clk, posedge rst)
-        if (rst) 
-            for ( int i = 0; i < depth; i++ )
-                shift_vld [i] <= 0;
-        
-        else begin
-            shift_vld[0] <= in_vld;
-            for ( int i = 1; i < depth; i++ )
-                shift_vld[i] <= shift_vld[i-1];
-        end
-    
-    always_ff @ (posedge clk) begin
-        if (in_vld) 
-            shift_reg[0] <= in_data;
-        for (int i = 1; i < depth; i++)
-            if (shift_vld[i-1])
-                shift_reg[i] <= shift_reg[i - 1];
-    end
-    
-    assign out_vld  = shift_vld[depth - 1];
-    assign out_data = shift_reg[depth - 1];
+    // NOTHING TO DO HERE
 
 
 endmodule

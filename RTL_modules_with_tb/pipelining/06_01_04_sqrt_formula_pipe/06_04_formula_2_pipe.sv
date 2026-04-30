@@ -1,7 +1,3 @@
-//----------------------------------------------------------------------------
-// Task
-//----------------------------------------------------------------------------
-
 module formula_2_pipe
 (
     input         clk,
@@ -16,31 +12,86 @@ module formula_2_pipe
     output [31:0] res
 );
 
-    // Task:
-    //
-    // Implement a pipelined module formula_2_pipe that computes the result
-    // of the formula defined in the file formula_2_fn.svh.
-    //
-    // The requirements:
-    //
-    // 1. The module formula_2_pipe has to be pipelined.
-    //
-    // It should be able to accept a new set of arguments a, b and c
-    // arriving at every clock cycle.
-    //
-    // It also should be able to produce a new result every clock cycle
-    // with a fixed latency after accepting the arguments.
-    //
-    // 2. Your solution should instantiate exactly 3 instances
-    // of a pipelined isqrt module, which computes the integer square root.
-    //
-    // 3. Your solution should save dynamic power by properly connecting
-    // the valid bits.
-    //
-    // You can read the discussion of this problem
-    // in the article by Yuri Panchul published in
-    // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
-    // You can download this issue from https://fpga-systems.ru/fsm#state_0
+   
 
+    wire        isqrt_c_vld;
+    wire [15:0] isqrt_c;
+    
+    wire        isqrt_bc_vld;
+    wire [15:0] isqrt_bc;
+    
+    wire        isqrt_abc_vld;
+    wire [15:0] isqrt_abc;
+
+  
+    localparam ISQRT_LATENCY = 16;
+
+   
+    isqrt i_isqrt_c
+    (
+        .clk   ( clk         ),
+        .rst   ( rst         ),
+        .x_vld ( arg_vld     ),
+        .x     ( c           ),
+        .y_vld ( isqrt_c_vld ),
+        .y     ( isqrt_c     )
+    );
+
+ 
+    wire [31:0] b_delayed;
+    wire        b_vld;
+    
+    shift_register_with_valid #(.width(32), .depth(ISQRT_LATENCY)) i_shift_b
+    (
+        .clk      ( clk        ),
+        .rst      ( rst        ),
+        .in_vld   ( arg_vld    ),
+        .in_data  ( b          ),
+        .out_vld  ( b_vld      ),
+        .out_data ( b_delayed  )
+    );
+
+    wire [31:0] sum_bc =  (b_delayed) +  (isqrt_c);
+
+ 
+    isqrt i_isqrt_bc
+    (
+        .clk   ( clk          ),
+        .rst   ( rst          ),
+        .x_vld ( isqrt_c_vld  ),
+        .x     ( sum_bc       ),
+        .y_vld ( isqrt_bc_vld ),
+        .y     ( isqrt_bc     )
+    );
+
+
+    wire [31:0] a_delayed;
+    wire        a_vld;
+    
+    shift_register_with_valid #(.width(32), .depth(2 * ISQRT_LATENCY)) i_shift_a
+    (
+        .clk      ( clk       ),
+        .rst      ( rst       ),
+        .in_vld   ( arg_vld   ),
+        .in_data  ( a         ),
+        .out_vld  ( a_vld     ),
+        .out_data ( a_delayed )
+    );
+
+    wire [31:0] sum_abc =  (a_delayed) + (isqrt_bc);
+
+    
+    isqrt i_isqrt_abc
+    (
+        .clk   ( clk           ),
+        .rst   ( rst           ),
+        .x_vld ( isqrt_bc_vld  ),
+        .x     ( sum_abc       ),
+        .y_vld ( isqrt_abc_vld ),
+        .y     ( isqrt_abc     )
+    );
+
+    assign res_vld = isqrt_abc_vld;
+    assign res     = (isqrt_abc);
 
 endmodule
